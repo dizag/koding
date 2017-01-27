@@ -81,7 +81,7 @@ func preparePath(path string) (string, error) {
 
 	info, err := os.Stat(absPath)
 	if os.IsNotExist(err) {
-		return "", fmt.Errorf("remote path %s does not exist", absPath)
+		return "", fmt.Errorf("remote path %q does not exist", absPath)
 	} else if err != nil {
 		return "", fmt.Errorf("cannot stat remote path: %s", err)
 	}
