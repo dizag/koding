@@ -196,8 +196,27 @@ func (idx *Index) Lookup(name string) (*Node, bool) {
 // Compare rereads the given file tree roted at root and compares its entries
 // to previous state of the index. All detected changes will be stored in
 // returned Change slice.
-func (idx *Index) Compare(root string) (cs ChangeSlice) {
+func (idx *Index) Compare(root string) ChangeSlice {
+	return idx.CompareBranch("", root)
+}
+
+// CompareBranch rereads the given file tree roted at root and compares its entries
+// with index state roted at branch node.
+//
+// All detected changes will be stored in returned Change slice.
+// If branch is empty, the comparison is made against root of the index.
+func (idx *Index) CompareBranch(branch, root string) (cs ChangeSlice) {
+	idx.mu.RLock()
+	rt, ok := idx.root.Lookup(branch)
+	idx.mu.RUnlock()
+
+	if !ok {
+		rt = newNode()
+	}
+
 	visited := make(map[string]struct{})
+
+	rootBranch := filepath.Join(root, branch)
 
 	// Walk over current root path and check it files.
 	walkFn := func(path string, info os.FileInfo, err error) error {
@@ -205,15 +224,18 @@ func (idx *Index) Compare(root string) (cs ChangeSlice) {
 			return nil
 		}
 
-		name, err := filepath.Rel(root, path)
+		name, err := filepath.Rel(rootBranch, path)
 		if err != nil || name == "." {
 			return nil
 		}
+
 		name = filepath.ToSlash(name)
 
 		idx.mu.RLock()
-		nd, ok := idx.root.Lookup(name)
+		nd, ok := rt.Lookup(name)
 		idx.mu.RUnlock()
+
+		name = filepath.Join(branch, name)
 
 		// Not found in current index - file was added.
 		if !ok {
@@ -232,7 +254,7 @@ func (idx *Index) Compare(root string) (cs ChangeSlice) {
 		return nil
 	}
 
-	if err := filepath.Walk(root, walkFn); err != nil {
+	if err := filepath.Walk(rootBranch, walkFn); err != nil {
 		return nil
 	}
 

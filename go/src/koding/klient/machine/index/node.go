@@ -137,7 +137,7 @@ func (nd *Node) ForEach(fn func(string, *Entry)) {
 }
 
 func (nd *Node) Lookup(name string) (*Node, bool) {
-	if name == "/" {
+	if name == "/" || name == "" {
 		return nd, true
 	}
 
