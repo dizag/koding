@@ -1,8 +1,10 @@
 package index
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type Node struct {
@@ -11,9 +13,16 @@ type Node struct {
 }
 
 func newNode() *Node {
+	t := time.Now().UTC().UnixNano()
+
 	return &Node{
-		Sub:   make(map[string]*Node),
-		Entry: &Entry{},
+		Sub: make(map[string]*Node),
+		Entry: &Entry{
+			CTime: t,
+			MTime: t,
+			Mode:  0700 | os.ModeDir,
+			Size:  10,
+		},
 	}
 }
 
