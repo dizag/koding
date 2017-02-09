@@ -134,8 +134,10 @@ func NewFilesystem(opts *Opts) (*Filesystem, error) {
 }
 
 // Close implements the notify.Notifier interface.
-func (fs *Filesystem) Close() {
+func (fs *Filesystem) Close() error {
 	fs.Destroy()
+
+	return nil
 }
 
 func (fs *Filesystem) Config() *fuse.MountConfig {
