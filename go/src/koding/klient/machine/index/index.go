@@ -388,5 +388,14 @@ func (idx *Index) UnmarshalJSON(data []byte) error {
 	}
 	defer r.Close()
 
-	return json.NewDecoder(r).Decode(&idx.root)
+	if err = json.NewDecoder(r).Decode(&idx.root); err != nil {
+		return err
+	}
+
+	// BUG(rjeczalik): Something overwrites the root entry
+	// with a zero value elsewhere. Fix me.
+	idx.root.Entry = newEntry()
+
+	return nil
+
 }

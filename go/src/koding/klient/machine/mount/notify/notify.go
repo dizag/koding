@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 
+	"koding/klient/fs"
 	"koding/klient/machine/index"
 	"koding/klient/machine/mount"
 )
@@ -20,6 +21,7 @@ type BuildOpts struct {
 
 	RemoteIdx *index.Index // known state of remote index.
 	LocalIdx  *index.Index // known state of local index.
+	Disk      *fs.DiskInfo // block device info
 }
 
 // Builder represents a factory method which external notifiers must implement
