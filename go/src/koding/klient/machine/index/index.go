@@ -18,14 +18,24 @@ import (
 // Version stores current version of index.
 const Version = 1
 
+// EntryMeta describes entry metadata.
+type EntryMeta int32
+
+const (
+	EntryPromiseAdd EntryMeta = iota << 1
+	EntryPromiseUpdate
+	EntryPromiseDel
+)
+
 // Entry represents a single file registered to index.
 type Entry struct {
-	CTime int64       `json:"c"` // Metadata change time since EPOCH.
-	MTime int64       `json:"m"` // File data change time since EPOCH.
-	Mode  os.FileMode `json:"o"` // File mode and permission bits.
-	Size  int64       `json:"s"` // Size of the file.
-	Hash  []byte      `json:"h"` // Hash of file content.
-	Aux   uint64      `json:"-"` // Auxiliary data, fuse uses it to store fuseops.InodeID.
+	Hash  []byte      `json:"h"`          // Hash of file content.
+	CTime int64       `json:"c"`          // Metadata change time since EPOCH.
+	MTime int64       `json:"m"`          // File data change time since EPOCH.
+	Size  int64       `json:"s"`          // Size of the file.
+	Aux   uint64      `json:"-"`          // Auxiliary data, fuse uses it to store fuseops.InodeID.
+	Mode  os.FileMode `json:"o"`          // File mode and permission bits.
+	Meta  EntryMeta   `json:"t,omitempy"` // Entry metadata.
 }
 
 // NewEntryFile creates new Entry from a file stored under path argument.
@@ -166,6 +176,13 @@ func (idx *Index) addEntryWorker(root string, wg *sync.WaitGroup, fC <-chan *fil
 	}
 }
 
+// UpsertEntry
+func (idx *Index) UpsertEntry(path string, meta EntryMeta, mode os.FileMode) {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+}
+
 // Count returns the number of entries stored in index. Only items which size is
 // below provided value are counted. If provided argument is negative, this
 // function will return the number of all entries.
@@ -186,6 +203,7 @@ func (idx *Index) DiskSize(maxsize int64) int64 {
 	return idx.root.DiskSize(maxsize)
 }
 
+// Lookup looks up a node by the given name.
 func (idx *Index) Lookup(name string) (*Node, bool) {
 	idx.mu.RLock()
 	defer idx.mu.RUnlock()

@@ -31,7 +31,7 @@ func newEntry() *Entry {
 }
 
 func (nd *Node) Add(name string, entry *Entry) {
-	if name == "/" {
+	if name == "/" || name == "" {
 		nd.Entry = entry
 		return
 	}
@@ -39,6 +39,10 @@ func (nd *Node) Add(name string, entry *Entry) {
 	var node string
 
 	for {
+		if nd.deleted() {
+			nd.undelete()
+		}
+
 		node, name = split(name)
 
 		sub, ok := nd.Sub[node]
@@ -60,6 +64,10 @@ func (nd *Node) Del(name string) {
 	var node string
 
 	for {
+		if nd.deleted() {
+			return
+		}
+
 		node, name = split(name)
 
 		if name == "" {
@@ -86,6 +94,10 @@ func (nd *Node) Count(maxsize int64) (count int) {
 	for len(stack) != 0 {
 		cur, stack = stack[0], stack[1:]
 
+		if cur.deleted() {
+			continue
+		}
+
 		if cur.Entry != nil && (maxsize < 0 || cur.Entry.Size <= maxsize) && cur != nd {
 			count++
 		}
@@ -107,6 +119,10 @@ func (nd *Node) DiskSize(maxsize int64) (size int64) {
 
 	for len(stack) != 0 {
 		nd, stack = stack[0], stack[1:]
+
+		if nd.deleted() {
+			continue
+		}
 
 		if nd.Entry != nil && (maxsize < 0 || nd.Entry.Size <= maxsize) {
 			size += nd.Entry.Size
@@ -138,6 +154,10 @@ func (nd *Node) ForEach(fn func(string, *Entry)) {
 	for len(stack) != 0 {
 		n, stack = stack[0], stack[1:]
 
+		if n.node.deleted() {
+			continue
+		}
+
 		for path, nd := range n.node.Sub {
 			stack = append(stack, node{
 				path: filepath.Join(n.path, path),
@@ -150,6 +170,10 @@ func (nd *Node) ForEach(fn func(string, *Entry)) {
 }
 
 func (nd *Node) Lookup(name string) (*Node, bool) {
+	return nd.lookup(name, false)
+}
+
+func (nd *Node) lookup(name string, all bool) (*Node, bool) {
 	if name == "/" || name == "" {
 		return nd, true
 	}
@@ -157,6 +181,10 @@ func (nd *Node) Lookup(name string) (*Node, bool) {
 	var node string
 
 	for {
+		if nd.deleted() {
+			return nil, false
+		}
+
 		node, name = split(name)
 
 		sub, ok := nd.Sub[node]
@@ -170,6 +198,14 @@ func (nd *Node) Lookup(name string) (*Node, bool) {
 
 		nd = sub
 	}
+}
+
+func (nd *Node) deleted() bool {
+	return nd.Entry.Meta&EntryPromiseDel != 0
+}
+
+func (nd *Node) undelete() {
+	nd.Entry.Meta = nd.Entry.Meta & (^EntryPromiseDel)
 }
 
 func split(path string) (string, string) {
