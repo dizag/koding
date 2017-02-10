@@ -7,6 +7,9 @@ import (
 	"koding/klient/machine/mount"
 )
 
+// DiskBlocks retrieves information about remote directory volume.
+type DiskBlocks func() (size, total, free, used uint64, err error)
+
 // BuildOpts represents the context that can be used by external notifiers to
 // build their own type. Built notifier should only read from provided indexes
 // and, if changes occur, commit observed changes using Cache interface.
@@ -16,6 +19,8 @@ type BuildOpts struct {
 
 	Cache    Cache  // index file system change consumer.
 	CacheDir string // absolute path to locally cached files.
+
+	DiskBlocks DiskBlocks // remote directory volume info.
 
 	RemoteIdx *index.Index // known state of remote index.
 	LocalIdx  *index.Index // known state of local index.
