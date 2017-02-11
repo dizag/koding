@@ -1590,7 +1590,9 @@ module.exports = class JGroup extends Module
 
           model.remove (err) -> kallback label, next, err
 
-        async.series [
+        index = 0
+
+        queue = [
 
           (next) ->
             JName.one { name: slug }, (err, name) ->
@@ -1618,13 +1620,8 @@ module.exports = class JGroup extends Module
             { deleteReq } = require '../socialapi/requests'
 
             deleteReq url, { sessionToken }, (err, body) ->
+              err = null  if err?.description is 'not found'
               kallback 'Subscription', next, err
-
-          (next) =>
-            JSession = require '../session'
-            @sendNotification 'GroupDestroyed', slug, ->
-              JSession.remove { groupName: slug }, (err) ->
-                kallback 'JSession', next, err
 
           (next) ->
             JApiToken = require '../apitoken'
@@ -1632,19 +1629,33 @@ module.exports = class JGroup extends Module
               kallback 'JApiToken', next, err
 
           (next) =>
-            @constructor.emit 'GroupDestroyed', this
-            next()
+            JSession = require '../session'
+            @sendNotification 'GroupDestroyed'
+            JSession.remove { groupName: slug }, (err) ->
+              kallback 'JSession', next, err
 
           (next) =>
             @remove (err) -> kallback 'JGroup', next, err
 
-        ], =>
-          if errors.length
-            @sendNotification 'GroupDestroyed'
-            errors.forEach (error) ->
-              console.log '[GROUP_DESTROY_FAILED]: for ', slug, ' in ', error.label, ' with error', error.err
+        ]
 
-          callback()
+        do deleteTeam = =>
+
+          async.series queue, =>
+
+            callback()  if index is 0
+            return  unless errors.length
+
+            index++
+            @sendNotification 'GroupDestroyed'
+
+            errors.forEach (error) ->
+              console.log "[GROUP_DESTROY_FAILED]: Attempt: #{index}
+              for #{slug} in #{error.label} with error #{error.err}"
+
+            errors = []
+
+            deleteTeam()  if 0 < index < 3
 
 
   sendNotificationToAdmins: (event, contents) ->
